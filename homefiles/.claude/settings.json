@@ -1,0 +1,7 @@
+{
+  "skipDangerousModePermissionPrompt": true,
+  "statusLine": {
+    "type": "command",
+    "command": "bash /home/ralph/.claude/statusline-command.sh"
+  }
+}

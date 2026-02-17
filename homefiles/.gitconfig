@@ -1,0 +1,5 @@
+[user]
+	name = ralph
+	email = ralph@springfield.localhost
+[core]
+	excludesfile = /home/ralph/.gitignore_global
