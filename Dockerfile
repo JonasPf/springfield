@@ -13,6 +13,7 @@ RUN apt-get update && apt-get install -y \
     fish \
     sudo \
     jq \
+    trash-cli \
     ca-certificates \
     gnupg \
     && rm -rf /var/lib/apt/lists/*
