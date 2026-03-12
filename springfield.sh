@@ -49,8 +49,10 @@ if [ -n "$RUNNING" ]; then
     exec podman exec -it --user ralph "$RUNNING" fish
 fi
 
-# --- Create home directory ---
+# --- Create home directory and shared directory ---
 mkdir -p "$RALPH_HOME"
+SHARED_DIR="$HOME/.springfield/shared"
+mkdir -p "$SHARED_DIR"
 
 # --- Port configuration ---
 if [ "$RESET_CONFIG" = true ] && [ -f "$CONFIG" ]; then
@@ -111,5 +113,6 @@ exec podman run -it --rm \
     -e HOST_GID="$(id -g)" \
     -v "$WORKDIR:/work" \
     -v "$RALPH_HOME:/home/ralph" \
+    -v "$SHARED_DIR:/home/ralph/shared" \
     -w /work \
     "$IMAGE"
