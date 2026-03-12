@@ -1,5 +1,7 @@
 [user]
 	name = ralph
 	email = ralph@springfield.localhost
+[init]
+	defaultBranch = main
 [core]
 	excludesfile = /home/ralph/.gitignore_global
