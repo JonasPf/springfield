@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Springfield — Claude Chat Viewer</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --bg-surface: #161b22;
+    --bg-hover: #1c2129;
+    --border: #30363d;
+    --text: #e6edf3;
+    --text-muted: #8b949e;
+    --accent: #d2a8ff;
+    --accent-dim: #6e40c9;
+    --user-bg: #1a2233;
+    --assistant-bg: #161b22;
+    --tool-bg: #1a1e24;
+    --font-mono: 'SF Mono', 'Cascadia Code', 'Fira Code', Consolas, monospace;
+    --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    --radius: 8px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: var(--font-sans);
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* Layout */
+  .app { display: flex; height: 100vh; }
+
+  .sidebar {
+    width: 320px;
+    min-width: 320px;
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    background: var(--bg);
+    overflow: hidden;
+  }
+
+  .sidebar-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .sidebar-header h1 {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--accent);
+    letter-spacing: 0.02em;
+  }
+
+  .sidebar-header .subtitle {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+
+  .project-list, .session-list {
+    overflow-y: auto;
+    flex: 1;
+  }
+
+  .section-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 12px 20px 6px;
+  }
+
+  .item {
+    padding: 10px 20px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.1s;
+  }
+
+  .item:hover { background: var(--bg-hover); }
+  .item.active { background: var(--accent-dim); }
+
+  .item .title {
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .item .meta {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+
+  .back-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 20px;
+    font-size: 12px;
+    color: var(--accent);
+    cursor: pointer;
+    border-bottom: 1px solid var(--border);
+    background: none;
+    border-top: none;
+    border-left: none;
+    border-right: none;
+    width: 100%;
+    text-align: left;
+    font-family: var(--font-sans);
+  }
+
+  .back-btn:hover { background: var(--bg-hover); }
+
+  /* Main content */
+  .main {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .main-header {
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    flex-shrink: 0;
+  }
+
+  .main-header h2 {
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .main-header .meta {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+
+  .messages {
+    flex: 1;
+    padding: 16px 24px;
+    overflow-y: auto;
+  }
+
+  /* Messages */
+  .message {
+    margin-bottom: 16px;
+    max-width: 900px;
+  }
+
+  .message-role {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .message-role .timestamp {
+    font-weight: 400;
+    color: var(--text-muted);
+    text-transform: none;
+    letter-spacing: normal;
+  }
+
+  .role-user { color: #79c0ff; }
+  .role-assistant { color: var(--accent); }
+
+  .message-body {
+    padding: 12px 16px;
+    border-radius: var(--radius);
+    font-size: 14px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+
+  .message-body.user { background: var(--user-bg); border: 1px solid #1f3154; }
+  .message-body.assistant { background: var(--assistant-bg); border: 1px solid var(--border); }
+
+  .message-body code {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    background: rgba(110,64,201,0.15);
+    padding: 1px 5px;
+    border-radius: 3px;
+  }
+
+  .message-body pre {
+    background: #0d1117;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px;
+    overflow-x: auto;
+    margin: 8px 0;
+    white-space: pre;
+  }
+
+  .message-body pre code {
+    background: none;
+    padding: 0;
+  }
+
+  /* Tool calls */
+  .tool-call {
+    margin: 8px 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    max-width: 900px;
+  }
+
+  .tool-call-header {
+    padding: 8px 12px;
+    background: var(--tool-bg);
+    font-size: 12px;
+    font-family: var(--font-mono);
+    color: #7ee787;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    user-select: none;
+  }
+
+  .tool-call-header:hover { background: var(--bg-hover); }
+
+  .tool-call-header .chevron {
+    font-size: 10px;
+    transition: transform 0.15s;
+  }
+
+  .tool-call-header .chevron.open { transform: rotate(90deg); }
+
+  .tool-call-body {
+    display: none;
+    padding: 10px 12px;
+    font-size: 12px;
+    font-family: var(--font-mono);
+    line-height: 1.5;
+    background: #0d1117;
+    color: var(--text-muted);
+    max-height: 400px;
+    overflow: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+
+  .tool-call-body.open { display: block; }
+
+  .tool-result {
+    margin: 8px 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    max-width: 900px;
+  }
+
+  .tool-result-header {
+    padding: 8px 12px;
+    background: var(--tool-bg);
+    font-size: 12px;
+    font-family: var(--font-mono);
+    color: #f0883e;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    user-select: none;
+  }
+
+  .tool-result-header:hover { background: var(--bg-hover); }
+
+  .tool-result-body {
+    display: none;
+    padding: 10px 12px;
+    font-size: 12px;
+    font-family: var(--font-mono);
+    line-height: 1.5;
+    background: #0d1117;
+    color: var(--text-muted);
+    max-height: 400px;
+    overflow: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+
+  .tool-result-body.open { display: block; }
+
+  /* Thinking blocks */
+  .thinking-block {
+    margin: 8px 0;
+    border: 1px solid #3d2e5c;
+    border-radius: var(--radius);
+    overflow: hidden;
+    max-width: 900px;
+  }
+
+  .thinking-header {
+    padding: 8px 12px;
+    background: #1a1528;
+    font-size: 12px;
+    color: #a371f7;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    user-select: none;
+  }
+
+  .thinking-header:hover { background: #221a33; }
+
+  .thinking-body {
+    display: none;
+    padding: 10px 12px;
+    font-size: 13px;
+    line-height: 1.5;
+    background: #13111a;
+    color: #8b7db8;
+    max-height: 500px;
+    overflow: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .thinking-body.open { display: block; }
+
+  /* Loading state */
+  .loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--text-muted);
+    font-size: 14px;
+  }
+
+  .empty-state {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--text-muted);
+    font-size: 14px;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+  /* Filter */
+  .filter-input {
+    width: 100%;
+    padding: 8px 12px;
+    margin-top: 10px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-size: 13px;
+    font-family: var(--font-sans);
+    outline: none;
+  }
+
+  .filter-input:focus { border-color: var(--accent-dim); }
+  .filter-input::placeholder { color: #484f58; }
+
+  .hidden { display: none !important; }
+
+  .status-dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #3fb950;
+    margin-left: 8px;
+    vertical-align: middle;
+  }
+
+  .status-dot.stale { background: #d29922; }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <h1>Springfield <span class="status-dot" id="status-dot" title="Connected"></span></h1>
+      <div class="subtitle">Claude Chat Viewer</div>
+      <input type="text" class="filter-input hidden" id="filter" placeholder="Filter sessions...">
+    </div>
+    <div id="sidebar-content">
+      <div class="loading">Loading projects...</div>
+    </div>
+  </div>
+
+  <div class="main" id="main">
+    <div class="empty-state">Select a session to view</div>
+  </div>
+</div>
+
+<script>
+const state = {
+  projects: {},
+  currentProject: null,
+  currentSession: null,
+  sessionList: null,
+  // Track file mod times to detect changes
+  knownFiles: {},
+};
+
+const POLL_INTERVAL = 3000; // 3 seconds
+
+// --- API fetching ---
+
+async function fetchIndex() {
+  try {
+    const resp = await fetch('/api/index?_=' + Date.now());
+    if (!resp.ok) throw new Error('API error');
+    return await resp.json();
+  } catch (e) {
+    console.error('Failed to fetch index:', e);
+    return null;
+  }
+}
+
+async function fetchSession(project, sessionFile) {
+  try {
+    const resp = await fetch(`/api/session?project=${encodeURIComponent(project)}&file=${encodeURIComponent(sessionFile)}&_=${Date.now()}`);
+    if (!resp.ok) throw new Error('API error');
+    return await resp.json();
+  } catch (e) {
+    console.error('Failed to fetch session:', e);
+    return [];
+  }
+}
+
+// --- Data loading ---
+
+async function loadAll() {
+  const index = await fetchIndex();
+  if (!index) {
+    document.getElementById('sidebar-content').innerHTML =
+      '<div class="empty-state">Could not connect to server</div>';
+    setStatus(false);
+    return;
+  }
+
+  setStatus(true);
+
+  const projects = {};
+
+  for (const [projectName, projectData] of Object.entries(index.projects)) {
+    projects[projectName] = {
+      history: projectData.history || [],
+      sessionMeta: projectData.sessions || {},
+      sessions: state.projects[projectName]?.sessions || {},
+    };
+  }
+
+  state.projects = projects;
+
+  // Re-render sidebar if we're on a view that changed
+  const latestMtime = (proj) => {
+    const mtimes = Object.values(proj.sessionMeta || {}).map(s => s.mtime || '');
+    return mtimes.length > 0 ? mtimes.sort().pop() : '';
+  };
+  const projectNames = Object.keys(projects).sort((a, b) =>
+    latestMtime(projects[b]).localeCompare(latestMtime(projects[a]))
+  );
+  if (!state.currentProject && projectNames.length > 0) {
+    if (projectNames.length === 1) {
+      state.currentProject = projectNames[0];
+      renderSessionList();
+    } else {
+      renderProjectList();
+    }
+  } else if (state.currentProject && state.currentSession) {
+    // Check if current session's mtime changed, reload if so
+    const meta = projects[state.currentProject]?.sessionMeta;
+    if (meta) {
+      const sessionFile = state.currentSession + '.jsonl';
+      const metaEntry = meta[sessionFile];
+      const newMtime = typeof metaEntry === 'object' ? metaEntry.mtime : metaEntry;
+      const oldMtime = state.knownFiles[state.currentProject + '/' + sessionFile];
+      if (newMtime && newMtime !== oldMtime) {
+        await loadAndRenderSession(state.currentProject, state.currentSession);
+      }
+    }
+    // Also refresh sidebar to pick up new sessions
+    renderSessionList();
+  } else if (state.currentProject) {
+    renderSessionList();
+  } else {
+    renderProjectList();
+  }
+}
+
+async function loadAndRenderSession(projectName, sessionId) {
+  const sessionFile = sessionId + '.jsonl';
+  const lines = await fetchSession(projectName, sessionFile);
+
+  state.projects[projectName].sessions[sessionId] = { lines, isSubagent: false };
+  const metaEntry = state.projects[projectName].sessionMeta[sessionFile];
+  state.knownFiles[projectName + '/' + sessionFile] =
+    typeof metaEntry === 'object' ? metaEntry.mtime : metaEntry;
+
+  renderConversation(sessionId);
+}
+
+function setStatus(connected) {
+  const dot = document.getElementById('status-dot');
+  if (connected) {
+    dot.className = 'status-dot';
+    dot.title = 'Connected — auto-refreshing';
+  } else {
+    dot.className = 'status-dot stale';
+    dot.title = 'Disconnected';
+  }
+}
+
+// --- Rendering ---
+
+function renderProjectList() {
+  const filter = document.getElementById('filter');
+  filter.classList.add('hidden');
+
+  const container = document.getElementById('sidebar-content');
+  const latestMtime = (proj) => {
+    const mtimes = Object.values(proj.sessionMeta).map(s => s.mtime || '');
+    return mtimes.length > 0 ? mtimes.sort().pop() : '';
+  };
+  const projectNames = Object.keys(state.projects).sort((a, b) =>
+    latestMtime(state.projects[b]).localeCompare(latestMtime(state.projects[a]))
+  );
+
+  if (projectNames.length === 0) {
+    container.innerHTML = '<div class="empty-state">No projects found</div>';
+    return;
+  }
+
+  if (projectNames.length === 1) {
+    state.currentProject = projectNames[0];
+    renderSessionList();
+    return;
+  }
+
+  let html = '<div class="section-label">Projects</div><div class="project-list">';
+  for (const name of projectNames) {
+    const proj = state.projects[name];
+    const sessionCount = Object.keys(proj.sessionMeta).filter(f => !f.includes('/subagents/')).length;
+    html += `<div class="item" onclick="selectProject('${esc(name)}')">
+      <div class="title">${esc(name)}</div>
+      <div class="meta">${sessionCount} session${sessionCount !== 1 ? 's' : ''}</div>
+    </div>`;
+  }
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+function selectProject(name) {
+  state.currentProject = name;
+  state.currentSession = null;
+  renderSessionList();
+  renderMain();
+}
+
+function renderSessionList() {
+  const filter = document.getElementById('filter');
+  filter.classList.remove('hidden');
+  // Preserve filter value on refresh
+  const currentFilter = filter.value;
+  filter.oninput = () => filterSessions(filter.value);
+
+  const proj = state.projects[state.currentProject];
+  if (!proj) return;
+
+  const container = document.getElementById('sidebar-content');
+
+  // Build session summaries from sessionMeta + history + loaded sessions
+  const sessions = [];
+  for (const [filename, meta] of Object.entries(proj.sessionMeta)) {
+    // Skip subagent files
+    if (filename.includes('/')) continue;
+
+    const sessionId = filename.replace('.jsonl', '');
+    const mtime = typeof meta === 'object' ? meta.mtime : meta;
+    const serverPreview = typeof meta === 'object' ? (meta.preview || '') : '';
+
+    // Find matching history entries for display text
+    const histEntries = proj.history.filter(h => h.sessionId === sessionId);
+    let firstMsg = serverPreview;
+    let timestamp = mtime;
+    let msgCount = 0;
+
+    // If session is already loaded, use it for richer data
+    const loaded = proj.sessions[sessionId];
+    if (loaded) {
+      for (const line of loaded.lines) {
+        if (line.timestamp && timestamp === mtime) timestamp = line.timestamp;
+        if (line.type === 'user' && line.message) {
+          msgCount++;
+          if (!firstMsg) {
+            const content = line.message.content;
+            if (typeof content === 'string') {
+              firstMsg = content.replace(/<[^>]+>/g, '').trim();
+            } else if (Array.isArray(content)) {
+              for (const part of content) {
+                if (part.type === 'text' && part.text) {
+                  firstMsg = part.text.replace(/<[^>]+>/g, '').trim();
+                  break;
+                }
+              }
+            }
+          }
+        }
+        if (line.type === 'assistant') msgCount++;
+      }
+    }
+
+    // Fallback to history
+    if (!firstMsg && histEntries.length > 0) {
+      firstMsg = histEntries[0].display || '';
+    }
+    if (timestamp === mtime && histEntries.length > 0) {
+      timestamp = new Date(histEntries[0].timestamp).toISOString();
+    }
+
+    sessions.push({ id: sessionId, firstMsg: firstMsg.slice(0, 100), timestamp, msgCount });
+  }
+
+  // Sort by timestamp descending
+  sessions.sort((a, b) => {
+    if (!a.timestamp) return 1;
+    if (!b.timestamp) return -1;
+    return new Date(b.timestamp) - new Date(a.timestamp);
+  });
+
+  state.sessionList = sessions;
+
+  if (currentFilter) {
+    filterSessions(currentFilter);
+  } else {
+    renderSessionItems(sessions);
+  }
+}
+
+function renderSessionItems(sessions) {
+  const container = document.getElementById('sidebar-content');
+  const multiProject = Object.keys(state.projects).length > 1;
+
+  let html = '';
+  if (multiProject) {
+    html += `<button class="back-btn" onclick="goBackToProjects()">&#8592; Back to projects</button>`;
+  }
+  html += `<div class="section-label">${esc(state.currentProject)} &mdash; ${sessions.length} sessions</div>`;
+  html += '<div class="session-list">';
+
+  for (const s of sessions) {
+    const ts = s.timestamp ? formatDate(s.timestamp) : 'Unknown date';
+    const preview = s.firstMsg || '(empty session)';
+    const active = s.id === state.currentSession ? ' active' : '';
+    const msgInfo = s.msgCount ? ` &middot; ${s.msgCount} messages` : '';
+    html += `<div class="item${active}" onclick="selectSession('${esc(s.id)}')">
+      <div class="title">${esc(preview)}</div>
+      <div class="meta">${ts}${msgInfo}</div>
+    </div>`;
+  }
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+function goBackToProjects() {
+  state.currentProject = null;
+  state.currentSession = null;
+  renderProjectList();
+  renderMain();
+}
+
+function filterSessions(query) {
+  if (!state.sessionList) return;
+  const q = query.toLowerCase();
+  const filtered = q ? state.sessionList.filter(s =>
+    s.firstMsg.toLowerCase().includes(q) || s.id.includes(q)
+  ) : state.sessionList;
+  renderSessionItems(filtered);
+}
+
+async function selectSession(id) {
+  state.currentSession = id;
+  renderSessionList(); // re-render to update active state
+
+  const proj = state.projects[state.currentProject];
+  // Load session if not already loaded or if mtime changed
+  const sessionFile = id + '.jsonl';
+  const metaEntry = proj.sessionMeta[sessionFile];
+  const newMtime = typeof metaEntry === 'object' ? metaEntry.mtime : metaEntry;
+  const oldMtime = state.knownFiles[state.currentProject + '/' + sessionFile];
+
+  if (!proj.sessions[id] || newMtime !== oldMtime) {
+    document.getElementById('main').innerHTML = '<div class="loading">Loading conversation...</div>';
+    await loadAndRenderSession(state.currentProject, id);
+  } else {
+    renderConversation(id);
+  }
+}
+
+function renderMain() {
+  const main = document.getElementById('main');
+  main.innerHTML = '<div class="empty-state">Select a session to view</div>';
+}
+
+function renderConversation(sessionId) {
+  const proj = state.projects[state.currentProject];
+  const session = proj.sessions[sessionId];
+  if (!session) return;
+
+  const main = document.getElementById('main');
+  const lines = session.lines;
+
+  // Find first timestamp
+  let firstTs = null;
+  for (const l of lines) {
+    if (l.timestamp) { firstTs = l.timestamp; break; }
+  }
+
+  let html = `<div class="main-header">
+    <h2>${esc(state.currentProject)}</h2>
+    <div class="meta">Session ${sessionId.slice(0, 8)} &middot; ${firstTs ? formatDate(firstTs) : ''}</div>
+  </div><div class="messages">`;
+
+  // Forward pass: collect tool call ID -> name mappings
+  const toolNames = {};
+  for (const line of lines) {
+    if (line.type !== 'assistant') continue;
+    const content = line.message && line.message.content;
+    if (!content || !Array.isArray(content)) continue;
+    for (const block of content) {
+      if (block.type === 'tool_use') {
+        toolNames[block.id] = block.name;
+      }
+    }
+  }
+
+  // Render messages in reverse order (newest first)
+  const messageChunks = [];
+  for (const line of lines) {
+    if (line.type === 'file-history-snapshot' || line.type === 'progress') continue;
+
+    const role = line.type || (line.message && line.message.role) || 'unknown';
+    const ts = line.timestamp ? formatTime(line.timestamp) : '';
+
+    if (role === 'user') {
+      const content = line.message && line.message.content;
+      if (!content) continue;
+
+      if (typeof content === 'string') {
+        const cleaned = content.replace(/<[^>]+>/g, '').trim();
+        if (!cleaned) continue;
+        messageChunks.push(renderMessage('user', ts, renderMarkdownBasic(esc(cleaned))));
+      } else if (Array.isArray(content)) {
+        let hasText = false;
+        let textParts = '';
+        let toolResultParts = '';
+        for (const block of content) {
+          if (block.type === 'text' && block.text) {
+            const cleaned = block.text.replace(/<[^>]+>/g, '').trim();
+            if (cleaned) {
+              hasText = true;
+              textParts += renderMarkdownBasic(esc(cleaned));
+            }
+          } else if (block.type === 'tool_result') {
+            const toolContent = extractToolResult(block);
+            if (toolContent) {
+              toolResultParts += renderToolResult(block.tool_use_id, toolContent, toolNames);
+            }
+          }
+        }
+        if (hasText) {
+          messageChunks.push(`<div class="message">
+            <div class="message-role role-user">user <span class="timestamp">${ts}</span></div>
+            <div class="message-body user">${textParts}</div>
+            ${toolResultParts}
+          </div>`);
+        } else if (toolResultParts) {
+          messageChunks.push(toolResultParts);
+        }
+      }
+    } else if (role === 'assistant') {
+      const content = line.message && line.message.content;
+      if (!content || !Array.isArray(content)) continue;
+
+      let textParts = '';
+      let blockParts = '';
+      for (const block of content) {
+        if (block.type === 'thinking' && block.thinking) {
+          blockParts += renderThinking(block.thinking);
+        } else if (block.type === 'text' && block.text) {
+          textParts += renderMarkdownBasic(esc(block.text.trim()));
+        } else if (block.type === 'tool_use') {
+          blockParts += renderToolCall(block);
+        }
+      }
+
+      if (textParts || blockParts) {
+        messageChunks.push(`<div class="message">
+          <div class="message-role role-assistant">assistant <span class="timestamp">${ts}</span></div>
+          ${textParts ? `<div class="message-body assistant">${textParts}</div>` : ''}
+          ${blockParts}
+        </div>`);
+      }
+    }
+  }
+
+  messageChunks.reverse();
+  html += messageChunks.join('');
+
+  html += '</div>';
+  main.innerHTML = html;
+
+  // Newest messages are at the top, scroll to top to show them
+  const msgs = main.querySelector('.messages');
+  if (msgs) msgs.scrollTop = 0;
+}
+
+function renderMessage(role, timestamp, bodyHtml) {
+  const roleClass = role === 'user' ? 'role-user' : 'role-assistant';
+  const bodyClass = role === 'user' ? 'user' : 'assistant';
+  return `<div class="message">
+    <div class="message-role ${roleClass}">${role} <span class="timestamp">${timestamp}</span></div>
+    <div class="message-body ${bodyClass}">${bodyHtml}</div>
+  </div>`;
+}
+
+function renderToolCall(block) {
+  const id = uid();
+  const inputStr = typeof block.input === 'object' ? JSON.stringify(block.input, null, 2) : String(block.input || '');
+  let summary = block.name;
+  if (block.name === 'Read' && block.input && block.input.file_path) {
+    summary += ` ${block.input.file_path}`;
+  } else if (block.name === 'Write' && block.input && block.input.file_path) {
+    summary += ` ${block.input.file_path}`;
+  } else if (block.name === 'Edit' && block.input && block.input.file_path) {
+    summary += ` ${block.input.file_path}`;
+  } else if (block.name === 'Bash' && block.input && block.input.command) {
+    summary += ` $ ${block.input.command.slice(0, 60)}`;
+  } else if (block.name === 'Glob' && block.input && block.input.pattern) {
+    summary += ` ${block.input.pattern}`;
+  } else if (block.name === 'Grep' && block.input && block.input.pattern) {
+    summary += ` "${block.input.pattern}"`;
+  } else if (block.name === 'Agent' && block.input && block.input.description) {
+    summary += ` ${block.input.description}`;
+  }
+
+  return `<div class="tool-call">
+    <div class="tool-call-header" onclick="toggleCollapse('${id}')">
+      <span class="chevron" id="chev-${id}">&#9654;</span>
+      ${esc(summary)}
+    </div>
+    <div class="tool-call-body" id="body-${id}">${esc(inputStr)}</div>
+  </div>`;
+}
+
+function extractToolResult(block) {
+  if (!block.content) return block.output || null;
+  if (typeof block.content === 'string') return block.content;
+  if (Array.isArray(block.content)) {
+    return block.content.map(c => {
+      if (c.type === 'text') return c.text;
+      if (c.type === 'tool_reference') return `[tool: ${c.tool_name}]`;
+      return JSON.stringify(c);
+    }).join('\n');
+  }
+  return JSON.stringify(block.content);
+}
+
+function renderToolResult(toolUseId, content, pendingTools) {
+  const id = uid();
+  const toolName = pendingTools[toolUseId] || 'tool';
+  const preview = content.length > 80 ? content.slice(0, 80) + '...' : content;
+  return `<div class="tool-result">
+    <div class="tool-result-header" onclick="toggleCollapse('${id}')">
+      <span class="chevron" id="chev-${id}">&#9654;</span>
+      Result: ${esc(toolName)} &mdash; ${esc(preview)}
+    </div>
+    <div class="tool-result-body" id="body-${id}">${esc(content)}</div>
+  </div>`;
+}
+
+function renderThinking(text) {
+  const id = uid();
+  const preview = text.slice(0, 80).replace(/\n/g, ' ');
+  return `<div class="thinking-block">
+    <div class="thinking-header" onclick="toggleCollapse('${id}')">
+      <span class="chevron" id="chev-${id}">&#9654;</span>
+      Thinking${preview ? ': ' + esc(preview) + '...' : ''}
+    </div>
+    <div class="thinking-body" id="body-${id}">${esc(text)}</div>
+  </div>`;
+}
+
+function toggleCollapse(id) {
+  const body = document.getElementById('body-' + id);
+  const chev = document.getElementById('chev-' + id);
+  body.classList.toggle('open');
+  chev.classList.toggle('open');
+}
+
+// --- Markdown-lite ---
+function renderMarkdownBasic(escaped) {
+  let s = escaped.replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>');
+  s = s.replace(/`([^`]+)`/g, '<code>$1</code>');
+  s = s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  s = s.replace(/\*(.+?)\*/g, '<em>$1</em>');
+  return s;
+}
+
+// --- Utilities ---
+let _uid = 0;
+function uid() { return 'u' + (++_uid); }
+
+function esc(str) {
+  if (!str) return '';
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function formatDate(ts) {
+  try {
+    const d = new Date(typeof ts === 'number' ? ts : ts);
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  } catch { return String(ts); }
+}
+
+function formatTime(ts) {
+  try {
+    const d = new Date(typeof ts === 'number' ? ts : ts);
+    return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  } catch { return ''; }
+}
+
+// --- Polling ---
+
+async function poll() {
+  try {
+    await loadAll();
+  } catch (e) {
+    console.error('Poll error:', e);
+    setStatus(false);
+  }
+  setTimeout(poll, POLL_INTERVAL);
+}
+
+// Start
+poll();
+</script>
+</body>
+</html>

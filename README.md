@@ -32,6 +32,10 @@ You can run as many of these in parallel as you want — each project gets its o
 
 **`homefiles/`** — A template of `/home/ralph`, copied in on first boot. Fish and Vim config, git identity, Claude Code settings, prompt templates.
 
+## Session viewer
+
+`viewer.py` serves a local web UI (`viewer.html`) for browsing Claude Code chat sessions stored in `~/.springfield/`. Run it on the host, not inside a Springfield container, and open the printed URL — it discovers all projects, lists sessions by recency, and lets you read through conversations with syntax-highlighted tool calls and thinking blocks.
+
 ## Make it yours
 
 This is opinionated — it's my setup. Fork it and change whatever you want:
