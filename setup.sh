@@ -3,6 +3,8 @@
 # Installs homefiles, Claude Code, and spec-kit, then creates a lock file.
 set -e
 
+export PATH="$HOME/.local/bin:$HOME/scripts:$PATH"
+
 LOCK="$HOME/.setup_done"
 
 if [ -f "$LOCK" ]; then
