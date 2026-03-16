@@ -173,47 +173,19 @@ def check_clean_worktree() -> bool:
 def check_auto_compact() -> bool:
     """Return True if auto-compact is disabled (safe to proceed).
 
-    autoCompact can be false (disabled) or a number 1-100 (compact at N%
-    context usage). Default is 95. Any non-false value interferes with
-    the loop by compacting context mid-iteration.
+    Checks ~/.claude.json for autoCompactEnabled. When false, auto-compact
+    is disabled. Any other value (or missing key) means it's enabled and
+    will interfere with the loop.
     """
-    settings_paths = [
-        Path.home() / ".claude" / "settings.json",
-        Path.home() / ".claude.json",
-    ]
+    path = Path.home() / ".claude.json"
+    try:
+        data = json.loads(path.read_text())
+        if data.get("autoCompactEnabled") is False:
+            return True
+    except (json.JSONDecodeError, OSError, FileNotFoundError):
+        pass
 
-    # Also check project-level settings
-    project_settings = Path(".claude") / "settings.json"
-    if project_settings.exists():
-        settings_paths.insert(0, project_settings)
-
-    for path in settings_paths:
-        if not path.exists():
-            continue
-        try:
-            data = json.loads(path.read_text())
-            if "autoCompact" not in data:
-                continue
-            value = data["autoCompact"]
-            # Only false (boolean) means disabled
-            if value is False:
-                return True
-            if value is not False:
-                error(f"Auto-compact is enabled in {path} (value: {value})")
-                print()
-                info("Auto-compact interferes with the ralph wiggum loop by")
-                info("compacting context mid-iteration, which can cause the")
-                info("agent to lose track of what it was doing.")
-                print()
-                info("Disable it by running:")
-                print(f"      {c(BOLD, 'claude config set autoCompact false')}")
-                print()
-                return False
-        except (json.JSONDecodeError, OSError):
-            continue
-
-    # autoCompact defaults to 95 if not set in any file
-    error("Auto-compact is not explicitly disabled (defaults to 95%)")
+    error("Auto-compact is enabled (or not explicitly disabled)")
     print()
     info("Auto-compact interferes with the ralph wiggum loop by")
     info("compacting context mid-iteration, which can cause the")
