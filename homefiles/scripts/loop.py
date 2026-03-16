@@ -196,6 +196,8 @@ def check_auto_compact() -> bool:
                 continue
             value = data["autoCompact"]
             # Only false (boolean) means disabled
+            if value is False:
+                return True
             if value is not False:
                 error(f"Auto-compact is enabled in {path} (value: {value})")
                 print()
