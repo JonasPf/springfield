@@ -32,36 +32,27 @@ BUILD_DEFAULT_ITERATIONS = 20
 # ─── Prompt templates ────────────────────────────────────────────────────────
 
 BUILD_PROMPT_TEMPLATE = """\
-1. Study `specs/*` with up to 500 parallel Sonnet subagents to learn the application specifications.
-2. Study @IMPLEMENTATION_PLAN.md.
-3. Your task is to implement functionality per the specifications using parallel subagents. Follow @IMPLEMENTATION_PLAN.md and choose the most important unchecked item to address. Before making changes, search the codebase (don't assume not implemented) using Sonnet subagents. You may use up to 500 parallel Sonnet subagents for searches/reads and only 1 Sonnet subagent for build/tests. Use Opus subagents when complex reasoning is needed (debugging, architectural decisions).
-4. After implementing functionality or resolving problems, ensure the project still builds, run all the tests and linters. If functionality is missing then it's your job to add it as per the application specifications.
-5. When you discover issues, immediately update @IMPLEMENTATION_PLAN.md with your findings using a subagent. When resolved, check off the item with [x].
-6. When the build works, tests and linter pass, update @IMPLEMENTATION_PLAN.md (check off completed items).
+Read `specs/*` and @IMPLEMENTATION_PLAN.md. Pick the highest-priority unchecked item.
 
-9. When authoring documentation, capture the why — tests and implementation importance.
-99. You may add extra logging if required to debug issues.
-999. Use checkbox format in @IMPLEMENTATION_PLAN: - [ ] for pending, - [x] for done.
-9999. Keep @IMPLEMENTATION_PLAN.md current with learnings using a subagent — future work depends on this to avoid duplicating efforts. Update especially after finishing your turn.
-99999. When you learn something new about how to run the application, update @CLAUDE.md using a subagent but keep it brief. For example if you run commands multiple times before learning the correct command then that file should be updated.
-999999. For any bugs you notice, resolve them or document them in @IMPLEMENTATION_PLAN.md using a subagent even if it is unrelated to the current piece of work.
-9999999. Implement functionality completely. Placeholders and stubs waste efforts and time redoing the same work.
-99999999. When @IMPLEMENTATION_PLAN.md becomes large periodically clean out the items that are completed from the file using a subagent.
-999999999. If you find inconsistencies in the specs/* then use an Opus subagent to update the specs.
-9999999999. Keep @CLAUDE.md operational only — status updates and progress notes belong in `IMPLEMENTATION_PLAN.md`.
+Search the codebase before assuming anything is missing — use up to 500 parallel Sonnet subagents for search/read, 1 Sonnet subagent for build/test, Opus subagents for complex reasoning (debugging, architecture).
+
+Implement the item fully — no placeholders or stubs. Build, test, and lint. Fix any failures including pre-existing ones.
+
+Update @IMPLEMENTATION_PLAN.md throughout: `- [x]` when done, add new findings, document bugs. Periodically prune completed items. Use a subagent for plan updates.
+
+Update @CLAUDE.md (via subagent) only with operational knowledge (e.g. correct build commands). Keep it brief — progress belongs in IMPLEMENTATION_PLAN.md.
+
+Fix spec inconsistencies in `specs/*` using an Opus subagent. Documentation should capture *why*, not just *what*.
 """
 
 PLAN_PROMPT_TEMPLATE = """\
-1. Study `specs/*` with up to 250 parallel Sonnet subagents to learn the application specifications.
-2. Study @IMPLEMENTATION_PLAN.md (if present; it may be incorrect) and use up to 500 Sonnet subagents to study existing source code and compare it against `specs/*`. Use an Opus subagent to analyze findings, prioritize tasks, and create/update @IMPLEMENTATION_PLAN.md as a checkbox list sorted in priority of items yet to be implemented. 
+Plan only — do NOT implement anything.
 
-IMPORTANT: Plan only. Do NOT implement anything. Do NOT assume functionality is missing; confirm with code search first.
+Read `specs/*` (up to 250 parallel Sonnet subagents) and @IMPLEMENTATION_PLAN.md (if present; it may be stale or wrong).
 
-The implementation plan MUST use markdown checkbox syntax for every task item:
-- `- [ ]` for items not yet implemented
-- `- [x]` for items that are complete
+Search the codebase with up to 500 Sonnet subagents to verify what is and isn't implemented. Never assume something is missing — confirm with code search. Look for TODOs, placeholders, stubs, skipped/flaky tests, and incomplete implementations.
 
-ULTIMATE GOAL: Study the specs/* and codebase to produce a comprehensive, prioritized implementation plan. If a specification is missing, search first to confirm it doesn't exist, then if needed author it at specs/FILENAME.md. If you create a new specification then document the plan to implement it in @IMPLEMENTATION_PLAN.md using a subagent.
+Use an Opus subagent to analyze findings and produce/update @IMPLEMENTATION_PLAN.md as a prioritized checkbox list (`- [ ]` pending, `- [x]` done).
 """
 
 # ─── Terminal helpers ─────────────────────────────────────────────────────────
