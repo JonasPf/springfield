@@ -196,56 +196,6 @@ def check_auto_compact() -> bool:
     print()
     return False
 
-
-def check_auto_memory() -> bool:
-    """Return True if auto-memory is disabled (safe to proceed).
-
-    autoMemoryEnabled defaults to true. It must be explicitly set to
-    false to prevent Claude from writing memory files mid-iteration,
-    which pollutes context.
-    """
-    settings_paths = [
-        Path.home() / ".claude" / "settings.json",
-        Path.home() / ".claude.json",
-    ]
-
-    project_settings = Path(".claude") / "settings.json"
-    if project_settings.exists():
-        settings_paths.insert(0, project_settings)
-
-    for path in settings_paths:
-        if not path.exists():
-            continue
-        try:
-            data = json.loads(path.read_text())
-            if "autoMemoryEnabled" not in data:
-                continue
-            if data["autoMemoryEnabled"] is False:
-                return True
-            error(f"Auto-memory is enabled in {path}")
-            print()
-            info("Auto-memory pollutes the loop context by writing")
-            info("memory files mid-iteration.")
-            print()
-            info("Disable it by running:")
-            print(f"      {c(BOLD, 'claude config set autoMemoryEnabled false')}")
-            print()
-            return False
-        except (json.JSONDecodeError, OSError):
-            continue
-
-    # Not set anywhere — defaults to enabled
-    error("Auto-memory is not explicitly disabled (defaults to enabled)")
-    print()
-    info("Auto-memory pollutes the loop context by writing")
-    info("memory files mid-iteration.")
-    print()
-    info("Disable it by running:")
-    print(f"      {c(BOLD, 'claude config set autoMemoryEnabled false')}")
-    print()
-    return False
-
-
 def check_prompt_file(prompt_file: str) -> bool:
     """Verify the prompt file exists."""
     if not Path(prompt_file).exists():
@@ -350,7 +300,7 @@ def get_diff_stat_since(ref: str) -> str:
     return result.stdout.strip() if result.returncode == 0 else ""
 
 
-def run_claude_iteration(prompt_file: str) -> dict:
+def run_claude_iteration(prompt_file: str, model: str = "opus") -> dict:
     """Run a single Claude CLI iteration and parse the streaming JSON output.
 
     Returns dict with: success, tokens_in, tokens_out, duration_s, error.
@@ -370,18 +320,20 @@ def run_claude_iteration(prompt_file: str) -> dict:
     }
 
     try:
+        env = {**os.environ, "CLAUDE_CODE_DISABLE_AUTO_MEMORY": "1"}
         proc = subprocess.Popen(
             [
                 "claude", "-p",
                 "--dangerously-skip-permissions",
                 "--output-format", "stream-json",
-                "--model", "opus",
+                "--model", model,
                 "--verbose",
             ],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
+            env=env,
         )
 
         stdout, stderr = proc.communicate(input=prompt_text)
@@ -586,6 +538,7 @@ def main() -> int:
               %(prog)s build              Build mode, runs until plan is complete
               %(prog)s build -n 10        Build mode, max 10 iterations
               %(prog)s build --no-stop    Build mode, don't stop when plan is complete
+              %(prog)s build --model sonnet  Build mode with sonnet model
               %(prog)s plan               Plan mode, 20 iterations (default)
               %(prog)s plan -n 5          Plan mode, 5 iterations
         """),
@@ -603,12 +556,20 @@ def main() -> int:
         "--no-stop", action="store_true",
         help="Don't stop when all plan tasks are complete",
     )
+    build_parser.add_argument(
+        "--model", default="opus",
+        help="Claude model to use (default: opus)",
+    )
 
     # Plan mode
     plan_parser = subparsers.add_parser("plan", help="Generate/update IMPLEMENTATION_PLAN.md")
     plan_parser.add_argument(
         "-n", "--max-iterations", type=int, default=PLAN_DEFAULT_ITERATIONS,
         help=f"Max iterations (default: {PLAN_DEFAULT_ITERATIONS})",
+    )
+    plan_parser.add_argument(
+        "--model", default="opus",
+        help="Claude model to use (default: opus)",
     )
 
     # Init mode
@@ -629,6 +590,7 @@ def main() -> int:
 
     mode = args.mode
     max_iterations = args.max_iterations
+    model = args.model
     stop_on_complete = mode == "build" and not getattr(args, "no_stop", False)
 
     prompt_file = PLAN_PROMPT if mode == "plan" else BUILD_PROMPT
@@ -659,12 +621,7 @@ def main() -> int:
         return 1
     success("Auto-compact is not enabled")
 
-    # 4. Auto-memory
-    if not check_auto_memory():
-        return 1
-    success("Auto-memory is not enabled")
-
-    # 5. Prompt file
+    # 4. Prompt file
     if not check_prompt_file(prompt_file):
         return 1
     success(f"Prompt file found: {prompt_file}")
@@ -676,6 +633,7 @@ def main() -> int:
 
     section("Configuration")
     info(f"Mode:       {c(BOLD, mode.upper())}")
+    info(f"Model:      {c(BOLD, model)}")
     info(f"Branch:     {c(CYAN, branch)}")
     info(f"Head:       {c(DIM, head)}")
     info(f"Prompt:     {prompt_file}")
@@ -737,7 +695,7 @@ def main() -> int:
 
             print()
             print(c(CYAN, f"  {'─' * 50}"))
-            print(c(BOLD, f"  {iter_label}  ({mode.upper()})"))
+            print(c(BOLD, f"  {iter_label}  ({mode.upper()})  model={model}"))
             print(c(CYAN, f"  {'─' * 50}"))
 
             if mode == "build":
@@ -752,7 +710,7 @@ def main() -> int:
             info("Running Claude...")
             print()
 
-            iter_result = run_claude_iteration(prompt_file)
+            iter_result = run_claude_iteration(prompt_file, model)
 
             if not iter_result["success"]:
                 error(f"Claude iteration failed: {iter_result.get('error', 'unknown error')}")
