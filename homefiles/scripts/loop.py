@@ -26,42 +26,38 @@ PLAN_PROMPT = "PROMPT_plan.md"
 BUILD_PROMPT = "PROMPT_build.md"
 IMPLEMENTATION_PLAN = "IMPLEMENTATION_PLAN.md"
 
-PLAN_DEFAULT_ITERATIONS = 20
-BUILD_DEFAULT_ITERATIONS = 0  # unlimited
+PLAN_DEFAULT_ITERATIONS = 10
+BUILD_DEFAULT_ITERATIONS = 20
 
 # ─── Prompt templates ────────────────────────────────────────────────────────
 
 BUILD_PROMPT_TEMPLATE = """\
-0a. Study `specs/*` with up to 500 parallel Sonnet subagents to learn the application specifications.
-0b. Study @IMPLEMENTATION_PLAN.md.
+1. Study `specs/*` with up to 500 parallel Sonnet subagents to learn the application specifications.
+2. Study @IMPLEMENTATION_PLAN.md.
+3. Your task is to implement functionality per the specifications using parallel subagents. Follow @IMPLEMENTATION_PLAN.md and choose the most important unchecked item to address. Before making changes, search the codebase (don't assume not implemented) using Sonnet subagents. You may use up to 500 parallel Sonnet subagents for searches/reads and only 1 Sonnet subagent for build/tests. Use Opus subagents when complex reasoning is needed (debugging, architectural decisions).
+4. After implementing functionality or resolving problems, ensure the project still builds, run all the tests and linters. If functionality is missing then it's your job to add it as per the application specifications.
+5. When you discover issues, immediately update @IMPLEMENTATION_PLAN.md with your findings using a subagent. When resolved, check off the item with [x].
+6. When the build works, tests and linter pass, update @IMPLEMENTATION_PLAN.md (check off completed items).
 
-1. Your task is to implement functionality per the specifications using parallel subagents. Follow @IMPLEMENTATION_PLAN.md and choose the most important unchecked item to address. Before making changes, search the codebase (don't assume not implemented) using Sonnet subagents. You may use up to 500 parallel Sonnet subagents for searches/reads and only 1 Sonnet subagent for build/tests. Use Opus subagents when complex reasoning is needed (debugging, architectural decisions).
-2. After implementing functionality or resolving problems, run the tests for that unit of code that was improved. If functionality is missing then it's your job to add it as per the application specifications. Ultrathink.
-3. When you discover issues, immediately update @IMPLEMENTATION_PLAN.md with your findings using a subagent. When resolved, check off the item with [x].
-4. When the tests pass, update @IMPLEMENTATION_PLAN.md (check off completed items), then `git add -A` then `git commit` with a message describing the changes. Do NOT push to a remote.
-
-99999. Important: When authoring documentation, capture the why — tests and implementation importance.
-999999. Important: Single sources of truth, no migrations/adapters. If tests unrelated to your work fail, resolve them as part of the increment.
-9999999. As soon as there are no build or test errors create a git tag. If there are no git tags start at 0.0.0 and increment patch by 1 for example 0.0.1 if 0.0.0 does not exist.
-99999999. You may add extra logging if required to debug issues.
-999999999. Keep @IMPLEMENTATION_PLAN.md current with learnings using a subagent — future work depends on this to avoid duplicating efforts. Update especially after finishing your turn. Use checkbox format: - [ ] for pending, - [x] for done.
-9999999999. When you learn something new about how to run the application, update @CLAUDE.md using a subagent but keep it brief. For example if you run commands multiple times before learning the correct command then that file should be updated.
-99999999999. For any bugs you notice, resolve them or document them in @IMPLEMENTATION_PLAN.md using a subagent even if it is unrelated to the current piece of work.
-999999999999. Implement functionality completely. Placeholders and stubs waste efforts and time redoing the same work.
-9999999999999. When @IMPLEMENTATION_PLAN.md becomes large periodically clean out the items that are completed from the file using a subagent.
-99999999999999. If you find inconsistencies in the specs/* then use an Opus subagent with 'ultrathink' requested to update the specs.
-999999999999999. IMPORTANT: Keep @CLAUDE.md operational only — status updates and progress notes belong in `IMPLEMENTATION_PLAN.md`. A bloated CLAUDE.md pollutes every future loop's context.
+9. When authoring documentation, capture the why — tests and implementation importance.
+99. You may add extra logging if required to debug issues.
+999. Use checkbox format in @IMPLEMENTATION_PLAN: - [ ] for pending, - [x] for done.
+9999. Keep @IMPLEMENTATION_PLAN.md current with learnings using a subagent — future work depends on this to avoid duplicating efforts. Update especially after finishing your turn.
+99999. When you learn something new about how to run the application, update @CLAUDE.md using a subagent but keep it brief. For example if you run commands multiple times before learning the correct command then that file should be updated.
+999999. For any bugs you notice, resolve them or document them in @IMPLEMENTATION_PLAN.md using a subagent even if it is unrelated to the current piece of work.
+9999999. Implement functionality completely. Placeholders and stubs waste efforts and time redoing the same work.
+99999999. When @IMPLEMENTATION_PLAN.md becomes large periodically clean out the items that are completed from the file using a subagent.
+999999999. If you find inconsistencies in the specs/* then use an Opus subagent to update the specs.
+9999999999. Keep @CLAUDE.md operational only — status updates and progress notes belong in `IMPLEMENTATION_PLAN.md`.
 """
 
 PLAN_PROMPT_TEMPLATE = """\
-0a. Study `specs/*` with up to 250 parallel Sonnet subagents to learn the application specifications.
-0b. Study @IMPLEMENTATION_PLAN.md (if present) to understand the plan so far.
-
-1. Study @IMPLEMENTATION_PLAN.md (if present; it may be incorrect) and use up to 500 Sonnet subagents to study existing source code and compare it against `specs/*`. Use an Opus subagent to analyze findings, prioritize tasks, and create/update @IMPLEMENTATION_PLAN.md as a checkbox list sorted in priority of items yet to be implemented. Use `- [ ]` for pending items and `- [x]` for completed items. Ultrathink. Consider searching for TODO, minimal implementations, placeholders, skipped/flaky tests, and inconsistent patterns. Study @IMPLEMENTATION_PLAN.md to determine starting point for research and keep it up to date with items considered complete/incomplete using subagents.
+1. Study `specs/*` with up to 250 parallel Sonnet subagents to learn the application specifications.
+2. Study @IMPLEMENTATION_PLAN.md (if present; it may be incorrect) and use up to 500 Sonnet subagents to study existing source code and compare it against `specs/*`. Use an Opus subagent to analyze findings, prioritize tasks, and create/update @IMPLEMENTATION_PLAN.md as a checkbox list sorted in priority of items yet to be implemented. 
 
 IMPORTANT: Plan only. Do NOT implement anything. Do NOT assume functionality is missing; confirm with code search first.
 
-IMPORTANT: The implementation plan MUST use markdown checkbox syntax for every task item:
+The implementation plan MUST use markdown checkbox syntax for every task item:
 - `- [ ]` for items not yet implemented
 - `- [x]` for items that are complete
 
@@ -414,10 +410,6 @@ def fmt_cost(usd: float) -> str:
     return f"${usd:.2f}"
 
 
-# Using opus context window size (200k)
-CONTEXT_WINDOW = 200_000
-
-
 def print_iteration_report(
     iteration: int,
     iter_result: dict,
@@ -432,15 +424,12 @@ def print_iteration_report(
     info(f"Duration: {fmt_duration(iter_result['duration_s'])}")
 
     # Token usage for this iteration
-    ctx_tokens = iter_result["tokens_in"]
-    ctx_pct = (ctx_tokens / CONTEXT_WINDOW) * 100 if CONTEXT_WINDOW > 0 else 0
     print()
     info(f"This iteration:")
     print(f"      Input:  {c(CYAN, fmt_tokens(iter_result['tokens_in']))} tokens")
     print(f"      Output: {c(CYAN, fmt_tokens(iter_result['tokens_out']))} tokens")
     if iter_result["cache_read"]:
         print(f"      Cache read: {c(DIM, fmt_tokens(iter_result['cache_read']))} tokens")
-    print(f"      Context: {c(YELLOW, f'{ctx_pct:.1f}%')} of {fmt_tokens(CONTEXT_WINDOW)} window")
     if iter_result["cost_usd"]:
         print(f"      Cost: {c(DIM, fmt_cost(iter_result['cost_usd']))}")
 
@@ -523,6 +512,29 @@ def init_project() -> int:
     return 0
 
 
+def has_uncommitted_changes() -> bool:
+    """Return True if there are any staged, unstaged, or untracked changes."""
+    staged = subprocess.run(["git", "diff", "--cached", "--quiet"], capture_output=True)
+    unstaged = subprocess.run(["git", "diff", "--quiet"], capture_output=True)
+    untracked = subprocess.run(
+        ["git", "ls-files", "--others", "--exclude-standard"],
+        capture_output=True, text=True,
+    )
+    return staged.returncode != 0 or unstaged.returncode != 0 or bool(untracked.stdout.strip())
+
+
+def commit_checkpoint(mode: str, iteration: int, max_iterations: int) -> bool:
+    """Stage all changes and create a checkpoint commit. Returns True if a commit was made."""
+    if not has_uncommitted_changes():
+        return False
+
+    label = mode.capitalize()
+    msg = f"{label} Checkpoint - Iteration {iteration}/{max_iterations}"
+    subprocess.run(["git", "add", "-A"], capture_output=True)
+    subprocess.run(["git", "commit", "-m", msg], capture_output=True)
+    return True
+
+
 # ─── Main loop ────────────────────────────────────────────────────────────────
 
 
@@ -534,11 +546,11 @@ def main() -> int:
         epilog=textwrap.dedent("""\
             examples:
               %(prog)s init               Generate prompts and update .gitignore
-              %(prog)s build              Build mode, runs until plan is complete
+              %(prog)s build              Build mode, 20 iterations (default)
               %(prog)s build -n 10        Build mode, max 10 iterations
               %(prog)s build --no-stop    Build mode, don't stop when plan is complete
               %(prog)s build --model sonnet  Build mode with sonnet model
-              %(prog)s plan               Plan mode, 20 iterations (default)
+              %(prog)s plan               Plan mode, 10 iterations (default)
               %(prog)s plan -n 5          Plan mode, 5 iterations
         """),
     )
@@ -549,7 +561,7 @@ def main() -> int:
     build_parser = subparsers.add_parser("build", help="Implement from IMPLEMENTATION_PLAN.md")
     build_parser.add_argument(
         "-n", "--max-iterations", type=int, default=BUILD_DEFAULT_ITERATIONS,
-        help="Max iterations (0 = unlimited, default: unlimited)",
+        help=f"Max iterations (default: {BUILD_DEFAULT_ITERATIONS})",
     )
     build_parser.add_argument(
         "--no-stop", action="store_true",
@@ -636,10 +648,7 @@ def main() -> int:
     info(f"Branch:     {c(CYAN, branch)}")
     info(f"Head:       {c(DIM, head)}")
     info(f"Prompt:     {prompt_file}")
-    if max_iterations > 0:
-        info(f"Max iters:  {max_iterations}")
-    else:
-        info(f"Max iters:  {c(DIM, 'unlimited')}")
+    info(f"Max iters:  {max_iterations}")
     if mode == "build":
         info(f"Stop on completion: {c(GREEN, 'yes') if stop_on_complete else c(DIM, 'no')}")
 
@@ -665,15 +674,22 @@ def main() -> int:
 
     start_time = time.monotonic()
     iteration = 0
+    consecutive_no_changes = 0
 
     try:
         while True:
             iteration += 1
 
             # Check iteration limit
-            if max_iterations > 0 and iteration > max_iterations:
+            if iteration > max_iterations:
                 print()
                 success(f"Reached max iterations ({max_iterations}). Stopping.")
+                break
+
+            # Check if no changes for 2 consecutive iterations
+            if consecutive_no_changes >= 2:
+                print()
+                warn("No changes detected in the last 2 iterations. Stopping.")
                 break
 
             # In build mode, check if plan is complete
@@ -688,9 +704,7 @@ def main() -> int:
 
             # ── Iteration header ─────────────────────────────────────────
 
-            iter_label = f"Iteration {iteration}"
-            if max_iterations > 0:
-                iter_label += f" / {max_iterations}"
+            iter_label = f"Iteration {iteration} / {max_iterations}"
 
             print()
             print(c(CYAN, f"  {'─' * 50}"))
@@ -727,6 +741,16 @@ def main() -> int:
             # ── Post-iteration report ────────────────────────────────────
 
             print_iteration_report(iteration, iter_result, totals, head_before)
+
+            # ── Checkpoint commit ────────────────────────────────────────
+
+            committed = commit_checkpoint(mode, iteration, max_iterations)
+            if committed:
+                consecutive_no_changes = 0
+                success(f"Checkpoint commit: {mode.capitalize()} Checkpoint - Iteration {iteration}/{max_iterations}")
+            else:
+                consecutive_no_changes += 1
+                info(f"No changes to commit ({consecutive_no_changes} consecutive iteration{'s' if consecutive_no_changes != 1 else ''} without changes)")
 
 
     except KeyboardInterrupt:
