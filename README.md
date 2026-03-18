@@ -30,7 +30,7 @@ You can run as many of these in parallel as you want — each project gets its o
 
 **`setup.sh`** — Runs once on first boot as `ralph`. Copies `homefiles/` into `$HOME/`, installs Claude Code, and writes a lock file. Delete `~/.setup_done` and re-run it to reset.
 
-**`homefiles/`** — A template of `/home/ralph`, copied in on first boot. Fish and Vim config, git identity, Claude Code settings, prompt templates.
+**`homefiles/`** — A template of `/home/ralph`, copied in on first boot. Fish and Vim config, git identity, Claude Code settings.
 
 ## Session viewer
 

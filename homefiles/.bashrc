@@ -1,1 +1,1 @@
-export PATH="$HOME/go/bin:$HOME/.local/bin:$HOME/scripts:$PATH"
+export PATH="$HOME/go/bin:$HOME/.local/bin:$PATH"
