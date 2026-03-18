@@ -21,6 +21,12 @@ fi
 export HOME="/home/$USERNAME"
 chown -R "$TARGET_UID:$TARGET_GID" "$HOME"
 
+# Fix Docker socket permissions if mounted
+if [ -S /var/run/docker.sock ]; then
+    chmod 660 /var/run/docker.sock
+    chgrp docker /var/run/docker.sock
+fi
+
 # First-run setup (homefiles, Claude Code, spec-kit)
 if [ ! -f "$HOME/.setup_done" ]; then
     echo "🚀 First run detected — running setup..."

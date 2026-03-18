@@ -64,7 +64,6 @@ IMPORTANT: Plan only. Do NOT implement anything. Do NOT assume functionality is 
 IMPORTANT: The implementation plan MUST use markdown checkbox syntax for every task item:
 - `- [ ]` for items not yet implemented
 - `- [x]` for items that are complete
-This format is required so that loop.py can parse progress automatically.
 
 ULTIMATE GOAL: Study the specs/* and codebase to produce a comprehensive, prioritized implementation plan. If a specification is missing, search first to confirm it doesn't exist, then if needed author it at specs/FILENAME.md. If you create a new specification then document the plan to implement it in @IMPLEMENTATION_PLAN.md using a subagent.
 """

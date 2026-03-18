@@ -103,6 +103,7 @@ fi
 
 # --- Launch ---
 echo "🚀 Starting container: $CONTAINER_NAME"
+# Disable SELinux labeling so the container can access the host Podman socket
 exec podman run -it --rm \
     --name "$CONTAINER_NAME" \
     --hostname "$(basename "$WORKDIR")" \
@@ -111,6 +112,8 @@ exec podman run -it --rm \
     $TZ_FLAGS \
     -e HOST_UID="$(id -u)" \
     -e HOST_GID="$(id -g)" \
+    --security-opt label=disable \
+    -v "/run/user/$(id -u)/podman/podman.sock:/var/run/docker.sock" \
     -v "$WORKDIR:/work" \
     -v "$RALPH_HOME:/home/ralph" \
     -v "$SHARED_DIR:/home/ralph/shared" \

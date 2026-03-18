@@ -17,6 +17,8 @@ RUN apt-get update && apt-get install -y \
     trash-cli \
     ca-certificates \
     gnupg \
+    docker.io \
+    docker-compose-v2 \
     && rm -rf /var/lib/apt/lists/*
 
 # Go (latest stable from official tarball)
@@ -33,7 +35,8 @@ RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
 # Create non-root user with sudo access
 ARG USERNAME=ralph
 RUN useradd -m -s /usr/bin/fish ${USERNAME} \
-    && echo "${USERNAME} ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+    && echo "${USERNAME} ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers \
+    && usermod -aG docker ${USERNAME}
 
 # Copy homefiles into image (installed into home by setup.sh at first run)
 COPY --chown=${USERNAME}:${USERNAME} homefiles/ /opt/homefiles/
