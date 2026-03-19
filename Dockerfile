@@ -19,7 +19,6 @@ RUN apt-get update && apt-get install -y \
     gnupg \
     docker.io \
     docker-compose-v2 \
-    chrony \
     && rm -rf /var/lib/apt/lists/*
 
 # Go (latest stable from official tarball)

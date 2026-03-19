@@ -27,9 +27,6 @@ if [ -S /var/run/docker.sock ]; then
     chgrp docker /var/run/docker.sock
 fi
 
-# Start chrony for NTP time sync (fixes drift from host VM sleep/wake)
-chronyd -f /etc/chrony/chrony.conf 2>/dev/null || true
-
 # First-run setup (homefiles, Claude Code)
 if [ ! -f "$HOME/.setup_done" ]; then
     echo "🚀 First run detected — running setup..."
