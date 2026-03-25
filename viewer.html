@@ -611,6 +611,8 @@ function renderSessionList() {
     // Find matching history entries for display text
     const histEntries = proj.history.filter(h => h.sessionId === sessionId);
     let firstMsg = serverPreview;
+    // Always use mtime (last-modified time) for sorting/display so that
+    // loading a session doesn't change its position in the sidebar.
     let timestamp = mtime;
     let msgCount = 0;
 
@@ -618,7 +620,6 @@ function renderSessionList() {
     const loaded = proj.sessions[sessionId];
     if (loaded) {
       for (const line of loaded.lines) {
-        if (line.timestamp && timestamp === mtime) timestamp = line.timestamp;
         if (line.type === 'user' && line.message) {
           msgCount++;
           if (!firstMsg) {
@@ -639,12 +640,9 @@ function renderSessionList() {
       }
     }
 
-    // Fallback to history
+    // Fallback to history for preview text only (not timestamp)
     if (!firstMsg && histEntries.length > 0) {
       firstMsg = histEntries[0].display || '';
-    }
-    if (timestamp === mtime && histEntries.length > 0) {
-      timestamp = new Date(histEntries[0].timestamp).toISOString();
     }
 
     sessions.push({ id: sessionId, firstMsg: firstMsg.slice(0, 100), timestamp, msgCount });
